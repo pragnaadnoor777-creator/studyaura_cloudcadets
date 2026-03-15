@@ -2,8 +2,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Loader2, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 
-// Your Golden Key from Phase 1
-const API_URL = "https://7kn2ndhmp5.execute-api.us-east-1.amazonaws.com/dev";
+// Automatically pulls from .env.local or Vercel Settings
+const API_URL = import.meta.env.VITE_AWS_API_URL;
 
 const BrainDumpPanel = () => {
   const [thoughts, setThoughts] = useState('');
