@@ -188,16 +188,48 @@ const KnowledgeDungeon = ({ onExit }) => {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {rooms[currentRoom-1]?.options.map((answer, i) => (
-              <button 
-                key={i}
-                onClick={() => handleAnswer(i)}
-                disabled={showReward}
-                className="p-6 rounded-xl bg-white/5 border border-white/10 hover:border-cyan-400/50 hover:bg-cyan-400/10 text-xl font-semibold text-slate-300 transition-all text-left hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] disabled:opacity-50"
-              >
-                {answer}
-              </button>
-            ))}
+            {rooms[currentRoom-1]?.options && rooms[currentRoom-1].options.length > 0 ? (
+              rooms[currentRoom-1].options.map((answer, i) => (
+                <button 
+                  key={i}
+                  onClick={() => handleAnswer(i)}
+                  disabled={showReward}
+                  className="p-6 rounded-xl bg-white/5 border border-white/10 hover:border-cyan-400/50 hover:bg-cyan-400/10 text-xl font-semibold text-slate-300 transition-all text-left hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] disabled:opacity-50"
+                >
+                  {answer}
+                </button>
+              ))
+            ) : (
+              // Open-ended answer input for Bedrock-generated rooms
+              <div className="col-span-2 flex gap-3">
+                <input
+                  id="open-answer"
+                  type="text"
+                  placeholder="Type your answer..."
+                  disabled={showReward}
+                  className="flex-1 bg-black/20 border border-cyan-400/30 rounded-xl px-5 py-4 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20 transition-all disabled:opacity-50 text-lg"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !showReward) {
+                      handleAnswer(e.target.value);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                <button
+                  disabled={showReward}
+                  onClick={() => {
+                    const input = document.getElementById('open-answer');
+                    if (input?.value.trim()) {
+                      handleAnswer(input.value.trim());
+                      input.value = '';
+                    }
+                  }}
+                  className="px-8 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-lg disabled:opacity-50 hover:scale-105 transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                >
+                  Submit
+                </button>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

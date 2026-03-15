@@ -109,12 +109,13 @@ const FocusGuardian = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={startFocusSession}
+          disabled={isActive}
           className={`px-6 py-3 border rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-            isActive ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400' : 'bg-white/10 border-white/10 text-slate-200 hover:bg-white/20'
+            isActive ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400 opacity-50 cursor-not-allowed' : 'bg-white/10 border-white/10 text-slate-200 hover:bg-white/20'
           }`}
         >
           <Play className="w-4 h-4" />
-          {isActive ? 'Resuming...' : 'Start Focus'}
+          {isActive ? 'Active' : 'Start Focus'}
         </motion.button>
         
         <motion.button
