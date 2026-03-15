@@ -55,42 +55,53 @@ const TimelineBento = () => {
                     initial={{ opacity: 0, scale: 0.8, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: index * 0.1 }}
-                    whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.08)" }}
+                    whileHover={{ scale: 1.02 }}
                     className={`
-                      bg-white/5 backdrop-blur-xl border rounded-xl p-4 cursor-pointer transition-all relative group
+                      relative group cursor-pointer rounded-xl overflow-hidden transition-all duration-300
+                      bg-white/5 border backdrop-blur-sm p-4
                       ${task.isActive 
-                        ? 'border-cyan-400/50 shadow-[0_0_25px_rgba(6,182,212,0.2)]' 
+                        ? 'border-cyan-400/50 shadow-[0_0_25px_rgba(6,182,212,0.15)]' 
                         : 'border-white/10 hover:border-white/30'
                       }
                     `}
                   >
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className={`
-                        p-2 rounded-lg transition-colors
-                        ${task.isActive 
-                          ? 'bg-gradient-to-br from-cyan-400 to-blue-600 shadow-lg' 
-                          : 'bg-white/10 group-hover:bg-white/20'
-                        }
-                      `}>
-                        <Icon className="w-4 h-4 text-white" />
+                    {/* NEW: Spotlight Hover Glow Effect */}
+                    <div className="absolute -inset-px bg-gradient-to-r from-cyan-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0" />
+
+                    <div className="relative z-10">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className={`
+                          p-2 rounded-lg transition-all duration-300
+                          ${task.isActive 
+                            ? 'bg-gradient-to-br from-cyan-400 to-blue-600 shadow-lg' 
+                            : 'bg-white/10 group-hover:bg-white/20'
+                          }
+                        `}>
+                          <Icon className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-[13px] font-bold text-slate-100 mb-0.5 truncate group-hover:text-cyan-400 transition-colors">
+                            {task.name}
+                          </h3>
+                          <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tighter">{task.time}</p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-[13px] font-bold text-slate-100 mb-0.5 truncate">{task.name}</h3>
-                        <p className="text-[10px] text-slate-500 font-medium uppercase tracking-tighter">{task.time}</p>
+                      
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className={`text-[9px] px-2 py-0.5 rounded border transition-colors ${
+                          task.isActive 
+                          ? 'bg-cyan-400/10 border-cyan-400/30 text-cyan-400' 
+                          : 'bg-white/5 border-white/10 text-slate-500'
+                        }`}>
+                          {task.badge}
+                        </span>
+                        {task.isActive && (
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+                          </span>
+                        )}
                       </div>
-                    </div>
-                    
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className={`text-[9px] px-2 py-0.5 rounded border ${
-                        task.isActive 
-                        ? 'bg-cyan-400/10 border-cyan-400/30 text-cyan-400' 
-                        : 'bg-white/5 border-white/10 text-slate-500'
-                      }`}>
-                        {task.badge}
-                      </span>
-                      {task.isActive && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
-                      )}
                     </div>
                   </motion.div>
                 );
@@ -102,7 +113,7 @@ const TimelineBento = () => {
 
       {/* Mini Hint for Demo */}
       <div className="mt-4 pt-3 border-t border-white/5">
-        <p className="text-[10px] text-slate-600 text-center italic italic">
+        <p className="text-[10px] text-slate-600 text-center italic">
           Tasks generated via AWS Bedrock & DynamoDB Scheduler
         </p>
       </div>

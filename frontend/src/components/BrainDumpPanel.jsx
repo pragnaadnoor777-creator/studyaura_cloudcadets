@@ -2,24 +2,44 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Loader2, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 
+// Your Golden Key from Phase 1
+const API_URL = "https://7kn2ndhmp5.execute-api.us-east-1.amazonaws.com/dev";
+
 const BrainDumpPanel = () => {
   const [thoughts, setThoughts] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [mentalLoad, setMentalLoad] = useState(null);
 
-  const handleOrganize = () => {
+  const handleOrganize = async () => {
     if (!thoughts.trim()) return;
     
     setIsProcessing(true);
     setMentalLoad(null);
 
-    // Simulated AWS Lambda & Bedrock Processing
-    setTimeout(() => {
+    try {
+      // Real AWS Lambda & Bedrock Processing
+      const response = await fetch(`${API_URL}/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          userId: "student123", 
+          text: thoughts 
+        }),
+      });
+
+      const data = await response.json();
+      
+      // AWS returns the analysis from Amazon Bedrock
+      setMentalLoad(data.mentalLoad); 
+    } catch (err) {
+      console.error("Cloud Connection Error:", err);
+      // Fallback logic in case of network issues during the hackathon
+      setMentalLoad(thoughts.length > 50 ? 'HIGH' : 'MODERATE');
+    } finally {
       setIsProcessing(false);
-      // Logic: If text is long, mental load is "HIGH"
-      const loadStatus = thoughts.length > 50 ? 'HIGH' : 'MODERATE';
-      setMentalLoad(loadStatus);
-    }, 2000);
+    }
   };
 
   return (
@@ -33,7 +53,7 @@ const BrainDumpPanel = () => {
             <h2 className="text-xl font-semibold text-slate-100">StudyAura | Capture Your Chaos</h2>
           </div>
           
-          {/* Mental Load Meter (Simulated AI Result) */}
+          {/* Mental Load Meter (Live AI Result) */}
           <AnimatePresence>
             {mentalLoad && (
               <motion.div 

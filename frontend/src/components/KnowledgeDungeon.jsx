@@ -1,23 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Sword, Shield, ChevronRight, Lock } from 'lucide-react';
+import { Trophy, Sword, Shield, ChevronRight, Lock, Loader2 } from 'lucide-react';
+
+// Your Golden Key
+const API_URL = "https://7kn2ndhmp5.execute-api.us-east-1.amazonaws.com/dev";
 
 const KnowledgeDungeon = ({ onExit }) => {
   const [xp, setXp] = useState(120);
   const [currentRoom, setCurrentRoom] = useState(1);
   const [showReward, setShowReward] = useState(false);
   const [isCorrect, setIsCorrect] = useState(null);
+  
+  // Changed rooms to State so AWS can populate them dynamically
+  const [rooms, setRooms] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const rooms = [
-    { id: 1, name: 'Arrays', question: 'What is the time complexity of accessing an element in an array?', options: ['A. O(n)', 'B. O(log n)', 'C. O(1)', 'D. O(n²)'], correct: 2 },
-    { id: 2, name: 'Linked Lists', question: 'Which structure uses Last-In, First-Out (LIFO)?', options: ['A. Queue', 'B. Stack', 'C. Array', 'D. Graph'], correct: 1 }
-  ];
+  // Phase 3 Wiring: Fetch Dynamic Dungeon from AWS
+  useEffect(() => {
+    const fetchCustomDungeon = async () => {
+      try {
+        const response = await fetch(`${API_URL}/dungeon`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: "student123" }) 
+        });
+        const data = await response.json();
+        
+        // AWS Bedrock generates these based on Chat history!
+        if (data.customRooms && data.customRooms.length > 0) {
+          setRooms(data.customRooms);
+        } else {
+          // Fallback if the backend returns an empty set
+          setRooms([
+            { id: 1, name: 'Arrays', question: 'What is the time complexity of accessing an element in an array?', options: ['A. O(n)', 'B. O(log n)', 'C. O(1)', 'D. O(n²)'], correct: 2 },
+            { id: 2, name: 'Linked Lists', question: 'Which structure uses Last-In, First-Out (LIFO)?', options: ['A. Queue', 'B. Stack', 'C. Array', 'D. Graph'], correct: 1 }
+          ]);
+        }
+      } catch (error) {
+        console.error("Failed to load custom dungeon", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchCustomDungeon();
+  }, []);
 
-  const handleAnswer = (index) => {
+  const handleAnswer = async (index) => {
     if (index === rooms[currentRoom - 1].correct) {
       setIsCorrect(true);
       setShowReward(true);
-      setXp(prev => prev + 20); // Dynamic XP Gain [cite: 119]
+      setXp(prev => prev + 20);
+
+      // Optional: Send progress back to AWS to update user XP in DynamoDB
+      try {
+        await fetch(`${API_URL}/progress`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: "student123", xpGained: 20 })
+        });
+      } catch (e) { console.log("Progress sync skipped"); }
+
     } else {
       setIsCorrect(false);
       setTimeout(() => setIsCorrect(null), 1000);
@@ -30,10 +72,20 @@ const KnowledgeDungeon = ({ onExit }) => {
       setShowReward(false);
       setIsCorrect(null);
     } else {
-      alert("Dungeon Cleared! +50 XP Bonus!"); // [cite: 123-124]
+      alert("Dungeon Cleared! +50 XP Bonus!");
       onExit();
     }
   };
+
+  // Loading Screen while AWS Bedrock generates the Dungeon
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0B0F19] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-12 h-12 text-amber-500 animate-spin" />
+        <p className="text-amber-500 font-bold tracking-widest animate-pulse">GENERATING CUSTOM DUNGEON...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen overflow-y-auto pb-32 bg-[#0B0F19] text-slate-300 font-sans p-6 relative">
@@ -56,7 +108,7 @@ const KnowledgeDungeon = ({ onExit }) => {
             <span className="text-sm font-medium uppercase tracking-wider text-slate-400">Dungeon Progress</span>
             <div className="w-48 h-3 bg-black/50 rounded-full overflow-hidden border border-white/10">
               <motion.div 
-                animate={{ width: `${(currentRoom / 3) * 100}%` }}
+                animate={{ width: `${(currentRoom / rooms.length) * 100}%` }}
                 className="h-full bg-gradient-to-r from-amber-500 to-orange-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"
               ></motion.div>
             </div>
@@ -68,7 +120,7 @@ const KnowledgeDungeon = ({ onExit }) => {
       </motion.div>
 
       <div className="grid grid-cols-12 gap-6">
-        {/* Left Sidebar - Room Navigation [cite: 99-103] */}
+        {/* Left Sidebar - Room Navigation */}
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -85,7 +137,7 @@ const KnowledgeDungeon = ({ onExit }) => {
           </ul>
         </motion.div>
 
-        {/* Center Area - The Question Challenge [cite: 104-105] */}
+        {/* Center Area - The Question Challenge */}
         <motion.div 
           key={currentRoom}
           initial={{ opacity: 0, scale: 0.95 }}
@@ -94,17 +146,17 @@ const KnowledgeDungeon = ({ onExit }) => {
         >
           <div className="text-center mb-10">
             <h3 className="text-amber-500 font-bold tracking-widest uppercase text-sm mb-2">Challenge Round</h3>
-            <h2 className="text-3xl font-bold text-slate-100">Room {currentRoom}: {rooms[currentRoom-1].name}</h2>
+            <h2 className="text-3xl font-bold text-slate-100">Room {currentRoom}: {rooms[currentRoom-1]?.name}</h2>
           </div>
 
           <div className={`bg-black/40 border rounded-2xl p-8 mb-8 text-center shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] transition-all ${isCorrect === true ? 'border-green-500/50' : isCorrect === false ? 'border-red-500/50 animate-shake' : 'border-amber-500/20'}`}>
             <p className="text-2xl text-slate-200 leading-relaxed font-medium">
-              "{rooms[currentRoom-1].question}"
+              "{rooms[currentRoom-1]?.question}"
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {rooms[currentRoom-1].options.map((answer, i) => (
+            {rooms[currentRoom-1]?.options.map((answer, i) => (
               <button 
                 key={i}
                 onClick={() => handleAnswer(i)}
@@ -118,7 +170,7 @@ const KnowledgeDungeon = ({ onExit }) => {
         </motion.div>
       </div>
 
-      {/* Bottom Action Bar [cite: 116-125] */}
+      {/* Bottom Action Bar */}
       <motion.div 
         className="fixed bottom-0 left-0 right-0 bg-[#0B0F19]/90 backdrop-blur-2xl border-t border-white/10 p-4 flex items-center justify-between z-50 px-10"
       >
