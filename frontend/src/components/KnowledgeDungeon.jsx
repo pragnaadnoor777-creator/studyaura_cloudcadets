@@ -19,18 +19,28 @@ const KnowledgeDungeon = ({ onExit }) => {
   useEffect(() => {
     const fetchCustomDungeon = async () => {
       try {
+        // Bug fix: must include action: "generate" — backend returns 400 without it
         const response = await fetch(`${API_URL}/dungeon`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: "student123" }) 
+          body: JSON.stringify({ userId: "student123", action: "generate" })
         });
         const data = await response.json();
-        
-        // AWS Bedrock generates these based on Chat history!
-        if (data.customRooms && data.customRooms.length > 0) {
-          setRooms(data.customRooms);
+
+        // Bug fix: backend returns a single challenge object { roomName, question, correctAnswer, explanation }
+        // not an array of customRooms. Normalize it into the shape the UI expects.
+        if (data.roomName && data.question) {
+          setRooms([{
+            id: 1,
+            name: data.roomName,
+            question: data.question,
+            correctAnswer: data.correctAnswer,
+            explanation: data.explanation,
+            // Open-ended answer — options array is empty; handleAnswer uses verify action instead
+            options: [],
+          }]);
         } else {
-          // Fallback if the backend returns an empty set
+          // Fallback if the backend returns an unexpected shape
           setRooms([
             { id: 1, name: 'Arrays', question: 'What is the time complexity of accessing an element in an array?', options: ['A. O(n)', 'B. O(log n)', 'C. O(1)', 'D. O(n²)'], correct: 2 },
             { id: 2, name: 'Linked Lists', question: 'Which structure uses Last-In, First-Out (LIFO)?', options: ['A. Queue', 'B. Stack', 'C. Array', 'D. Graph'], correct: 1 }
@@ -45,24 +55,46 @@ const KnowledgeDungeon = ({ onExit }) => {
     fetchCustomDungeon();
   }, []);
 
-  const handleAnswer = async (index) => {
-    if (index === rooms[currentRoom - 1].correct) {
-      setIsCorrect(true);
-      setShowReward(true);
-      setXp(prev => prev + 20);
+  const handleAnswer = async (indexOrText) => {
+    const room = rooms[currentRoom - 1];
 
-      // Optional: Send progress back to AWS to update user XP in DynamoDB
-      try {
-        await fetch(`${API_URL}/progress`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: "student123", xpGained: 20 })
-        });
-      } catch (e) { console.log("Progress sync skipped"); }
+    // Multiple-choice path (fallback static rooms)
+    if (room.options && room.options.length > 0) {
+      if (indexOrText === room.correct) {
+        setIsCorrect(true);
+        setShowReward(true);
+        setXp(prev => prev + 20);
+      } else {
+        setIsCorrect(false);
+        setTimeout(() => setIsCorrect(null), 1000);
+      }
+      return;
+    }
 
-    } else {
-      setIsCorrect(false);
-      setTimeout(() => setIsCorrect(null), 1000);
+    // Open-ended path (Bedrock-generated rooms) — use the verify action
+    try {
+      const response = await fetch(`${API_URL}/dungeon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: "student123",
+          action: "verify",
+          question: room.question,
+          correctAnswer: room.correctAnswer,
+          userAnswer: indexOrText,
+        }),
+      });
+      const data = await response.json();
+      if (data.isCorrect) {
+        setIsCorrect(true);
+        setShowReward(true);
+        setXp(prev => prev + (data.xpAwarded || 20));
+      } else {
+        setIsCorrect(false);
+        setTimeout(() => setIsCorrect(null), 1000);
+      }
+    } catch (e) {
+      console.error("Answer verify failed", e);
     }
   };
 

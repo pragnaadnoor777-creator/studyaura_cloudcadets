@@ -31,8 +31,9 @@ async function fetchChatHistory(userId) {
   const items = result.Items || [];
 
   // Reverse to chronological order for the prompt
+  // Map "ai" -> "assistant" so Bedrock's Claude API accepts the role value
   return items.reverse().map((item) => ({
-    role: item.role.S,
+    role: item.role.S === "ai" ? "assistant" : "user",
     content: item.message.S,
   }));
 }
